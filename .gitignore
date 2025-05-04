@@ -1,0 +1,8 @@
+build/**
+**.dSYM
+.vscode/**
+
+# macOS junk
+.DS_Store
+.AppleDouble
+._*

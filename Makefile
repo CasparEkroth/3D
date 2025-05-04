@@ -20,11 +20,10 @@ ifeq ($(OS), Darwin)
               -L/opt/homebrew/lib \
               -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer -lSDL2_net \
               -lpthread
-    REMOV = rm -rf build/*.o $(CLIENT_EXEC) $(SERVER_EXEC)
-    SERVER_EXEC = build/server
-    CLIENT_EXEC = build/main
+    REMOV = rm -rf build/*.o $(EXEC)
+    EXEC = build/main
     RUN = ./
-    PREFORM =
+    PREFORM = ioio
 else ifeq ($(OS), Windows_NT)
 # --- Windows (MinGW/MSYS) Settings ---
 	CC = gcc
@@ -33,8 +32,7 @@ else ifeq ($(OS), Windows_NT)
 	LDFLAGS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf \
 			  -lSDL2_mixer -lSDL2_net -lws2_32
 	REMOV = del /Q $(BUILDDIR)\*.o & if exist $(CLIENT_EXEC) del /Q $(CLIENT_EXEC) & if exist $(SERVER_EXEC) del /Q $(SERVER_EXEC)
-	SERVER_EXEC = build/server.exe
-	CLIENT_EXEC = build/main.exe
+	EXEC = build/main.exe
 	RUN = ./
 	PREFORM =
 else ifeq ($(OS), Linux)
@@ -42,50 +40,34 @@ else ifeq ($(OS), Linux)
 	CC = clang
 	CFLAGS = -fsanitize=address -fsanitize=undefined -g -Wall -Wextra `sdl2-config --cflags`
 	LDFLAGS = -fsanitize=address `sdl2-config --libs` -lSDL2_image -lSDL2_ttf -lSDL2_mixer -lSDL2_net -lpthread
-	REMOV = rm -rf build/*.o $(CLIENT_EXEC) $(SERVER_EXEC)
-	SERVER_EXEC = build/server
-	CLIENT_EXEC = build/main
+	REMOV = rm -rf build/*.o $(EXEC)
+	EXEC = build/main
 	RUN = ./
 	PREFORM =
 endif
 
 # ==== Vanliga variabler ====
-CLIENT_TARGET = $(CLIENT_EXEC)
-SERVER_TARGET = $(SERVER_EXEC)
+TARGET = $(EXEC)
 SRCDIR = source
-NETDIR = source/NET
-UIDIR = source/UI
-MAPDIR = source/MAP
-CONCURRENCYDIR = source/CONCURRENCY
 BUILDDIR = build
-OBJ_CLIENT = $(BUILDDIR)/main.o $(BUILDDIR)/game.o $(BUILDDIR)/clientLife.o $(BUILDDIR)/menu.o $(BUILDDIR)/panel.o $(BUILDDIR)/client.o $(BUILDDIR)/label.o $(BUILDDIR)/button.o $(BUILDDIR)/checklist.o $(BUILDDIR)/protocol.o $(BUILDDIR)/packetHandler.o $(BUILDDIR)/inputfield.o $(BUILDDIR)/shared.o $(BUILDDIR)/friend.o $(BUILDDIR)/players.o $(BUILDDIR)/map.o $(BUILDDIR)/hud.o $(BUILDDIR)/animation.o $(BUILDDIR)/terminalHub.o $(BUILDDIR)/perlinNoise.o
-OBJ_SERVER = $(BUILDDIR)/server.o $(BUILDDIR)/shared.o $(BUILDDIR)/protocol.o $(BUILDDIR)/packetHandler.o $(BUILDDIR)/serverLogic.o $(BUILDDIR)/map.o $(BUILDDIR)/perlinNoise.o $(BUILDDIR)/threads.o $(BUILDDIR)/enemies.o
+OBJ = $(BUILDDIR)/main.o $(BUILDDIR)/init.o 
 
 # Default Goal
-all: $(BUILDDIR) $(CLIENT_TARGET) $(SERVER_TARGET)
-
-# Build one exe file
-client: $(CLIENT_EXEC)
-
-server: $(SERVER_EXEC)
+all: $(BUILDDIR) $(TARGET)
 
 # Create build folder if it doesn't exist
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
 
 # Client build rule
-$(CLIENT_TARGET): $(OBJ_CLIENT)
-	$(CC) $(CFLAGS) $(OBJ_CLIENT) -o $(CLIENT_TARGET) $(LDFLAGS)
-
-# Server build rule
-$(SERVER_TARGET): $(OBJ_SERVER)
-	$(CC) $(CFLAGS) $(OBJ_SERVER) -o $(SERVER_TARGET) $(LDFLAGS)
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
 # Individuella objektfiler
 $(BUILDDIR)/main.o: $(SRCDIR)/main.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILDDIR)/game.o: $(SRCDIR)/game.c
+$(BUILDDIR)/init.o: $(SRCDIR)/init.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
