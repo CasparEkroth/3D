@@ -46,6 +46,7 @@ TriangleVector   VEC3D_GetCubeTriangles(MeshCube c);
 //Matrix
 void VEC3D_Matrix4x4Proj(Matrix4x4 * matProj,SDL_Window *pWin);
 void VEC3D_Matrix4x4MultiplyVector(const Vec3d *in, Vec3d *out, const Matrix4x4 *m);
-
+void VEC3D_Matrix4x4RotateX(Matrix4x4* mat, float theta);
+void VEC3D_Matrix4x4RotateZ(Matrix4x4* mat, float theta);
 
 #endif

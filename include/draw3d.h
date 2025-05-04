@@ -13,7 +13,4 @@ void DRAW3D_CubeRender(
     Matrix4x4     matProj
 );
 
-void VEC3D_Matrix4x4RotateX(Matrix4x4* mat, float theta);
-void VEC3D_Matrix4x4RotateZ(Matrix4x4* mat, float theta);
-
 #endif 

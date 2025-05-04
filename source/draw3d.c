@@ -62,27 +62,3 @@ void DRAW3D_CubeRender(
         );
     }
 }
-
-static void VEC3D_Matrix4x4Identity(Matrix4x4* mat) {
-    for (int r = 0; r < 4; r++)
-        for (int c = 0; c < 4; c++)
-            mat->m[r][c] = (r == c) ? 1.0f : 0.0f;
-}
-
-void VEC3D_Matrix4x4RotateZ(Matrix4x4* mat, float theta) {
-    float c = cosf(theta);
-    float s = sinf(theta);
-    VEC3D_Matrix4x4Identity(mat);
-    mat->m[0][0] =  c;  mat->m[0][1] = -s;
-    mat->m[1][0] =  s;  mat->m[1][1] =  c;
-    // z row/column and bottom row stay identity
-}
-
-void VEC3D_Matrix4x4RotateX(Matrix4x4* mat, float theta) {
-    float c = cosf(theta);
-    float s = sinf(theta);
-    VEC3D_Matrix4x4Identity(mat);
-    mat->m[1][1] =  c;  mat->m[1][2] = -s;
-    mat->m[2][1] =  s;  mat->m[2][2] =  c;
-    // x row/column and bottom row stay identity
-}
