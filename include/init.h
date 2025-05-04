@@ -16,7 +16,7 @@
 
 typedef struct{
     SDL_Window* pWindow;
-    SDL_Renderer *pRenderere;
+    SDL_Renderer *pRend;
     bool keys[SDL_NUM_SCANCODES];
     SDL_Point mouse_pos;
     bool programIsRunning;
@@ -32,7 +32,7 @@ void input(SDL_Event event,Game* pGame);
 void render(Game *pGame);
 void update(Game *pGame);
 
-void close_SDL(SDL_Window* pWindow,SDL_Renderer *pRenderer, Game *pGame);
+void close_SDL(SDL_Window* pWindow,SDL_Renderer *pRend, Game *pGame);
 
 
 #endif

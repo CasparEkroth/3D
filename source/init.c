@@ -26,8 +26,8 @@ bool initialize_window(Game *pGame){ // Initialiserar SDL och skapar fönster
         return false;
     }
     Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-    pGame->pRenderere = SDL_CreateRenderer(pGame->pWindow, -1, render_flags);
-    if (!pGame->pRenderere) {
+    pGame->pRend = SDL_CreateRenderer(pGame->pWindow, -1, render_flags);
+    if (!pGame->pRend) {
         fprintf(stderr, "Error creating SDL Renderer: %s\n", SDL_GetError());
         return false;
     }
@@ -62,9 +62,9 @@ void input(SDL_Event event,Game* pGame){
 }
 
 void render(Game *pGame){
-    SDL_RenderClear(pGame->pRenderere);
-    SDL_RenderCopy(pGame->pRenderere,pGame->helloworld,NULL,&pGame->hello);
-    SDL_RenderPresent(pGame->pRenderere);
+    SDL_RenderClear(pGame->pRend);
+    SDL_RenderCopy(pGame->pRend,pGame->helloworld,NULL,&pGame->hello);
+    SDL_RenderPresent(pGame->pRend);
 }
 
 void update(Game *pGame){

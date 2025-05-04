@@ -103,6 +103,10 @@ TriangleVector VEC3D_GetCubeTriangles(MeshCube c) {
 void VEC3D_Matrix4x4Proj(Matrix4x4 * matProj,SDL_Window *pWin){
     int sw = 0,sh = 0;
     SDL_GetWindowSize(pWin, &sw, &sh);
+    for (int r = 0; r < 4; r++)
+        for (int c = 0; c < 4; c++)
+            matProj->m[r][c] = 0.0f;
+
     float fAspectRatio = (float)sh / (float)sw;
     matProj->m[0][0] = fAspectRatio * fFOV_RAD;
     matProj->m[1][1] = fFOV_RAD;
@@ -150,4 +154,60 @@ void VEC3D_Matrix4x4RotateX(Matrix4x4* mat, float theta) {
     mat->m[1][1] =  c;  mat->m[1][2] = -s;
     mat->m[2][1] =  s;  mat->m[2][2] =  c;
     // x row/column and bottom row stay identity
+}
+
+void VEC3D_Vec3dNormal(Vec3d* normal, const Triangle *tri){
+    Vec3d line1, line2;
+    // edge from p0 → p1
+    line1.x = tri->p[1].x - tri->p[0].x;
+    line1.y = tri->p[1].y - tri->p[0].y;
+    line1.z = tri->p[1].z - tri->p[0].z;
+
+    line2.x = tri->p[2].x - tri->p[0].x;
+    line2.y = tri->p[2].y - tri->p[0].y;
+    line2.z = tri->p[2].z - tri->p[0].z;
+
+    // cross product
+    normal->x = line1.y * line2.z - line1.z * line2.y;
+    normal->y = line1.z * line2.x - line1.x * line2.z;
+    normal->z = line1.x * line2.y - line1.y * line2.x;
+
+    VEC3D_Vec3dNormalize(normal);
+}
+
+void VEC3D_Vec3dNormalize(Vec3d *vec){
+        float len = sqrtf(
+        vec->x*vec->x +
+        vec->y*vec->y +
+        vec->z*vec->z
+    );
+    if (len > 1e-6f) {
+        vec->x /= len;
+        vec->y /= len;
+        vec->z /= len;
+    } else {
+        // degenerate triangle: point vec straight out Z
+        vec->x = vec->y = 0.0f;
+        vec->z = 1.0f;
+    }
+}
+
+static int compare_mid_z(const void *a, const void *b) {
+    const Triangle *t1 = (const Triangle*)a;
+    const Triangle *t2 = (const Triangle*)b;
+    float z1 = (t1->p[0].z + t1->p[1].z + t1->p[2].z) / 3.0f;
+    float z2 = (t2->p[0].z + t2->p[1].z + t2->p[2].z) / 3.0f;
+    if (z1 < z2) return  1;   // z2 first
+    if (z1 > z2) return -1;   // z1 first
+    return 0;
+}
+
+void VEC3D_TriangleVectorSortByMidZ(TriangleVector tv){
+    if (!tv || tv->size < 2) return;
+    qsort(
+        tv->data,
+        tv->size,
+        sizeof(tv->data[0]),
+        compare_mid_z
+    );
 }
