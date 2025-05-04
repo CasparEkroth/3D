@@ -50,7 +50,7 @@ endif
 TARGET = $(EXEC)
 SRCDIR = source
 BUILDDIR = build
-OBJ = $(BUILDDIR)/main.o $(BUILDDIR)/init.o 
+OBJ = $(BUILDDIR)/main.o $(BUILDDIR)/init.o $(BUILDDIR)/vec3d.o $(BUILDDIR)/draw3d.o
 
 # Default Goal
 all: $(BUILDDIR) $(TARGET)
@@ -70,6 +70,11 @@ $(BUILDDIR)/main.o: $(SRCDIR)/main.c
 $(BUILDDIR)/init.o: $(SRCDIR)/init.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(BUILDDIR)/vec3d.o: $(SRCDIR)/vec3d.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILDDIR)/draw3d.o: $(SRCDIR)/draw3d.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	$(REMOV)
