@@ -50,7 +50,7 @@ endif
 TARGET = $(EXEC)
 SRCDIR = source
 BUILDDIR = build
-OBJ = $(BUILDDIR)/main.o $(BUILDDIR)/init.o $(BUILDDIR)/vec3d.o $(BUILDDIR)/draw3d.o $(BUILDDIR)/loadFromObjectFile.o $(BUILDDIR)/matrix4x4.o
+OBJ = $(BUILDDIR)/main.o $(BUILDDIR)/init.o $(BUILDDIR)/vec3d.o $(BUILDDIR)/draw3d.o $(BUILDDIR)/loadFromObjectFile.o $(BUILDDIR)/matrix.o
 
 # Default Goal
 all: $(BUILDDIR) $(TARGET)
@@ -79,7 +79,7 @@ $(BUILDDIR)/draw3d.o: $(SRCDIR)/draw3d.c
 $(BUILDDIR)/loadFromObjectFile.o: $(SRCDIR)/loadFromObjectFile.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILDDIR)/matrix4x4.o: $(SRCDIR)/matrix4x4.c
+$(BUILDDIR)/matrix.o: $(SRCDIR)/matrix.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

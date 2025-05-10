@@ -43,17 +43,17 @@ void close_SDL(SDL_Window* pWindow,SDL_Renderer *pRenderer, Game *pGame){
     SDL_Quit();
 }
 
-void input(SDL_Event event,Game* pGame){
-    while (SDL_PollEvent(&event)){
-        switch (event.type){
+void input(SDL_Event *event,Game* pGame){
+    while (SDL_PollEvent(event)){
+        switch (event->type){
         case SDL_QUIT:
             pGame->programIsRunning = false;
             break;
         case SDL_KEYDOWN: 
-            pGame->keys[event.key.keysym.scancode] = true;
+            pGame->keys[event->key.keysym.scancode] = true;
             break;
         case SDL_KEYUP:
-            pGame->keys[event.key.keysym.scancode] = false; 
+            pGame->keys[event->key.keysym.scancode] = false; 
         default:
             break;
         }
@@ -61,12 +61,4 @@ void input(SDL_Event event,Game* pGame){
     if(pGame->keys[SDL_SCANCODE_ESCAPE]) pGame->programIsRunning = false;
 }
 
-void render(Game *pGame){
-    SDL_RenderClear(pGame->pRend);
-    SDL_RenderCopy(pGame->pRend,pGame->helloworld,NULL,&pGame->hello);
-    SDL_RenderPresent(pGame->pRend);
-}
 
-void update(Game *pGame){
-
-}

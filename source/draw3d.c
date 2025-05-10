@@ -1,4 +1,7 @@
-#include "../include/draw3d.h"
+#include "../include/draw3d.h"    
+#include <stdio.h>                
+#include <stdint.h>               
+#include <stddef.h>               
 
 void DRAW3D_DrawTriangle(int x1,int y1, int x2,int y2, int x3,int y3, SDL_Renderer *pRend, uint8_t shade){
     SDL_SetRenderDrawColor(pRend, shade,shade,shade,255);
@@ -10,20 +13,15 @@ void DRAW3D_DrawTriangle(int x1,int y1, int x2,int y2, int x3,int y3, SDL_Render
 
 void DRAW3D_DrawFillTriangle(SDL_Renderer* pRend, SDL_Point v0, SDL_Point v1, SDL_Point v2, uint8_t shade){
     SDL_SetRenderDrawColor(pRend,shade,shade,shade,255);
-    // 1) Sort the vertices by Y ascending (v0.y <= v1.y <= v2.y)
     if (v1.y < v0.y) { SDL_Point t = v0; v0 = v1; v1 = t; }
     if (v2.y < v0.y) { SDL_Point t = v0; v0 = v2; v2 = t; }
     if (v2.y < v1.y) { SDL_Point t = v1; v1 = v2; v2 = t; }
 
-    // 2) Compute inverse slopes for the long edge (v0→v2)
     float dx02 = (float)(v2.x - v0.x) / (float)(v2.y - v0.y);
 
-    // 3) Rasterize upper half (v0→v1) and lower half (v1→v2)
-    //    by stepping y and computing left/right X endpoints
     float xl = (float)v0.x;
     float xr = (float)v0.x;
 
-    // Upper part: v0.y → v1.y
     if (v1.y > v0.y) {
         float dx01 = (float)(v1.x - v0.x) / (float)(v1.y - v0.y);
         xl = v0.x; 
@@ -36,7 +34,6 @@ void DRAW3D_DrawFillTriangle(SDL_Renderer* pRend, SDL_Point v0, SDL_Point v1, SD
             xr += dx01;
         }
     }
-    // Lower part: v1.y → v2.y
     if (v2.y > v1.y) {
         float dx12 = (float)(v2.x - v1.x) / (float)(v2.y - v1.y);
         // reset xl to the long edge at scanline v1.y
@@ -56,81 +53,139 @@ void DRAW3D_MeshRender(
     SDL_Renderer*    pRend,
     TriangleVector   mesh,
     Matrix4x4        matWorld,
+    Matrix4x4        matView,
     Matrix4x4        matProj,
-    Vec3d            vCamera
-) {
-    int w,h;
+    Vec3d            vCamera) {
+    int w, h;
     SDL_GetRendererOutputSize(pRend, &w, &h);
 
     size_t count = VEC3D_TriangleVectorSize(mesh);
     const Triangle *tris = VEC3D_TriangleVectorData(mesh);
-    TriangleVector sortTri;
-    sortTri = VEC3D_TriangleVectorCreate();
+    TriangleVector sortTri = VEC3D_TriangleVectorCreate();
+
+    int nTotal=0, nVisible=0, nClipped=0, nProjected=0;
+
     for (size_t i = 0; i < count; i++) {
-        // Fetch & transform the triangle
-        Triangle in        = tris[i];
-        Triangle  triProjected, triTransformd;
-        // rotate
-        triTransformd.p[0] = MATRIX_Matrix4x4MultiplyVector(&in.p[0], &matWorld);
-        triTransformd.p[1] = MATRIX_Matrix4x4MultiplyVector(&in.p[1], &matWorld);
-        triTransformd.p[2] = MATRIX_Matrix4x4MultiplyVector(&in.p[2], &matWorld);
+        nTotal++;
+        Triangle in = tris[i];
+        Triangle triTrans, triView;
 
-        Vec3d normal,line1,line2;
-        line1 = VEC3D_Vec3dSub(&triTransformd.p[1],&triTransformd.p[0]);
-        line2 = VEC3D_Vec3dSub(&triTransformd.p[2],&triTransformd.p[0]);
+        // World transform
+        triTrans.p[0] = MATRIX_Matrix4x4MultiplyVector(&in.p[0], &matWorld);
+        triTrans.p[1] = MATRIX_Matrix4x4MultiplyVector(&in.p[1], &matWorld);
+        triTrans.p[2] = MATRIX_Matrix4x4MultiplyVector(&in.p[2], &matWorld);
 
-        normal = VEC3D_Vec3dCrossProduct(&line1, &line2);
+        // Compute normal
+        Vec3d line1 = VEC3D_Vec3dSub(&triTrans.p[1], &triTrans.p[0]);
+        Vec3d line2 = VEC3D_Vec3dSub(&triTrans.p[2], &triTrans.p[0]);
+        Vec3d cp    = VEC3D_Vec3dCrossProduct(&line1, &line2);
+        Vec3d normal= VEC3D_Vec3dNormalize(&cp);
 
-        normal = VEC3D_Vec3dNormalize(&normal);
+        // Back-face cull
+        Vec3d viewRay = VEC3D_Vec3dSub(&triTrans.p[0], &vCamera);
+        if (VEC3D_Vec3dDotProduct(&normal, &viewRay) < 0.0f) {
+            nVisible++;
 
-        Vec3d vCameraRay = VEC3D_Vec3dSub(&triTransformd.p[0],&vCamera);
+            // Lighting
+            Vec3d light = VEC3D_Vec3dNormalize(&(Vec3d){0,0,-1,1});
+            float dp = fmaxf(0.1f, VEC3D_Vec3dDotProduct(&normal, &light));
+            uint8_t shade = (uint8_t)((0.1f + (1.0f-0.1f)*dp)*255);
+            triTrans.shade = shade;
 
-        if(VEC3D_Vec3dDotProduct(&normal,&vCameraRay) < 0.0f){
-            Vec3d light_dir = {0.0f,0.0f,-1.0f,1.0f};
-            light_dir = VEC3D_Vec3dNormalize(&light_dir);
+            // View transform
+            triView.p[0] = MATRIX_Matrix4x4MultiplyVector(&triTrans.p[0], &matView);
+            triView.p[1] = MATRIX_Matrix4x4MultiplyVector(&triTrans.p[1], &matView);
+            triView.p[2] = MATRIX_Matrix4x4MultiplyVector(&triTrans.p[2], &matView);
 
-            float dp_light = fmaxf(0.1f,VEC3D_Vec3dDotProduct(&normal,&light_dir));
-            const float ambient = 0.1f;
-            uint8_t shade = (uint8_t)((ambient + (1.0f-ambient)*dp_light)*255);
-            triTransformd.shade = shade;
-            // 3D --> 2D
-            triProjected.p[0] = MATRIX_Matrix4x4MultiplyVector(&triTransformd.p[0],&matProj);
-            triProjected.p[1] = MATRIX_Matrix4x4MultiplyVector(&triTransformd.p[1],&matProj);
-            triProjected.p[2] = MATRIX_Matrix4x4MultiplyVector(&triTransformd.p[2],&matProj);
-            triProjected.shade = triTransformd.shade;
+            // Clip against near plane
+            Triangle clipped[2];
+            int c = VEC3D_ClipAgainstPlane((Vec3d){0,0,0.1f,1}, (Vec3d){0,0,1,1}, &triView, &clipped[0], &clipped[1]);
+            nClipped += c;
 
-            triProjected.p[0] = VEC3D_Vec3dDiv(&triProjected.p[0],triProjected.p[0].w);
-            triProjected.p[1] = VEC3D_Vec3dDiv(&triProjected.p[1],triProjected.p[1].w);
-            triProjected.p[2] = VEC3D_Vec3dDiv(&triProjected.p[2],triProjected.p[2].w);
+            for (int j = 0; j < c; j++) {
+                // Project
+                Vec3d p0 = MATRIX_Matrix4x4MultiplyVector(&clipped[j].p[0], &matProj);
+                Vec3d p1 = MATRIX_Matrix4x4MultiplyVector(&clipped[j].p[1], &matProj);
+                Vec3d p2 = MATRIX_Matrix4x4MultiplyVector(&clipped[j].p[2], &matProj);
+                if (p0.w<=0||p1.w<=0||p2.w<=0) continue;
 
-            Vec3d vOffsetView = VEC3D_Vec3dConstructor(1.0f,1.0f,0.0f);
-            triProjected.p[0] = VEC3D_Vec3dAdd(&triProjected.p[0],&vOffsetView);
-            triProjected.p[1] = VEC3D_Vec3dAdd(&triProjected.p[1],&vOffsetView);
-            triProjected.p[2] = VEC3D_Vec3dAdd(&triProjected.p[2],&vOffsetView);
-            for (int i = 0; i < 3; i++){
-                triProjected.p[i].x *= 0.5f * (float)w; 
-                triProjected.p[i].y *= 0.5f * (float)h; 
+                Triangle proj;
+                proj.p[0] = VEC3D_Vec3dDiv(&p0,p0.w); proj.p[0].w=1;
+                proj.p[1] = VEC3D_Vec3dDiv(&p1,p1.w); proj.p[1].w=1;
+                proj.p[2] = VEC3D_Vec3dDiv(&p2,p2.w); proj.p[2].w=1;
+                proj.shade = clipped[j].shade;
+
+                // Screen coords
+                for (int k=0;k<3;k++) {
+                    proj.p[k].x = (proj.p[k].x+1.0f)*0.5f * w;
+                    proj.p[k].y = (proj.p[k].y+1.0f)*0.5f * h;
+                }
+
+                VEC3D_TriangleVectorPush(sortTri, proj);
+                nProjected++;
             }
-            
-            Triangle screenTri = triProjected;           // copy the projected points
-            screenTri.shade = triProjected.shade;      // bring over the lighting
-            VEC3D_TriangleVectorPush(sortTri, screenTri);
         }
-        
     }
+
+    // Sort & draw
     VEC3D_TriangleVectorSortByMidZ(sortTri);
-    size_t sortedCount = VEC3D_TriangleVectorSize(sortTri);
-    for (size_t i = 0; i < sortedCount; i++){
-        // Draw filled triangle
-        Triangle tres = VEC3D_TriangleVectorGetAt(sortTri,i);
-        DRAW3D_DrawFillTriangle(
-            pRend,
-            (SDL_Point){ (int)tres.p[0].x, (int)tres.p[0].y },
-            (SDL_Point){ (int)tres.p[1].x, (int)tres.p[1].y },
-            (SDL_Point){ (int)tres.p[2].x, (int)tres.p[2].y },
-            tres.shade
-        );
-        
+    for (size_t i = 0; i < VEC3D_TriangleVectorSize(sortTri); i++) {
+        // 1) Start with one triangle in our list
+        Triangle list[8];      // max grows: 1→2→4→8
+        int   nList = 1;
+        list[0] = VEC3D_TriangleVectorGetAt(sortTri, i);
+
+        // 2) Define the four clipping planes in screen‐space
+        //    (we ignore Z because we're clipping in 2D after projection)
+        Vec3d plane_p[4] = {
+            VEC3D_Vec3dConstructor(   0.0f,           0.0f, 0.0f),  // left
+            VEC3D_Vec3dConstructor(   0.0f, (float)h - 1, 0.0f),  // bottom
+            VEC3D_Vec3dConstructor(   0.0f,           0.0f, 0.0f),  // top
+            VEC3D_Vec3dConstructor((float)w - 1,      0.0f, 0.0f)   // right
+        };
+        Vec3d plane_n[4] = {
+            VEC3D_Vec3dConstructor( 1.0f,  0.0f, 0.0f),  // keep x >= 0
+            VEC3D_Vec3dConstructor( 0.0f, -1.0f, 0.0f),  // keep y <= h-1
+            VEC3D_Vec3dConstructor( 0.0f,  1.0f, 0.0f),  // keep y >= 0
+            VEC3D_Vec3dConstructor(-1.0f,  0.0f, 0.0f)   // keep x <= w-1
+        };
+
+        // 3) Clip against each edge in turn
+        for (int p = 0; p < 4; p++) {
+            int nOut = 0;
+            Triangle out[8]; // temporary buffer
+
+            for (int tidx = 0; tidx < nList; tidx++) {
+                Triangle clipped[2];
+                int n = VEC3D_ClipAgainstPlane(
+                    plane_p[p], plane_n[p],
+                    &list[ tidx ],
+                    &clipped[0],
+                    &clipped[1]
+                );
+                // n==0 → fully outside, n==1 → untouched or partially, n==2 → split
+                for (int k = 0; k < n; k++)
+                    out[nOut++] = clipped[k];
+            }
+
+            // move back into list for the next edge pass
+            nList = nOut;
+            for (int k = 0; k < nList; k++)
+                list[k] = out[k];
+
+            // if nothing survives, skip remaining planes
+            if (nList == 0) break;
+        }
+
+        // 4) Draw whatever’s left
+        for (int tidx = 0; tidx < nList; tidx++) {
+            Triangle *tt = &list[tidx];
+            // convert Vec3d → SDL_Point
+            SDL_Point v0 = { (int)tt->p[0].x, (int)tt->p[0].y };
+            SDL_Point v1 = { (int)tt->p[1].x, (int)tt->p[1].y };
+            SDL_Point v2 = { (int)tt->p[2].x, (int)tt->p[2].y };
+            DRAW3D_DrawFillTriangle(pRend, v0, v1, v2, tt->shade);
+        }
     }
     VEC3D_TriangleVectorDestroy(sortTri);
 }

@@ -1,5 +1,4 @@
-
-#include "../include/matrix4x4.h"
+# include "../include/matrix.h"
 
 Matrix4x4 MATRIX_Matrix4x4Identity(void){
     Matrix4x4 m = {0};
@@ -75,5 +74,37 @@ Matrix4x4 MATRIX_Matrix4x4MultiplyMatrix(Matrix4x4 *m1, Matrix4x4 *m2){
             mat.m[r][c] = m1->m[r][0] * m2->m[0][c] + m1->m[r][1] * m2->m[1][c] + m1->m[r][2] * m2->m[2][c] + m1->m[r][3] * m2->m[3][c];
         }
     }
+    return mat;
+}
+
+Matrix4x4 MATRIX_Matrix4x4PointAt(Vec3d *pos,Vec3d *target, Vec3d *up){
+    Vec3d newForward = VEC3D_Vec3dSub(target, pos);
+    newForward = VEC3D_Vec3dNormalize(&newForward);
+
+    Vec3d a = VEC3D_Vec3dMul(&newForward, VEC3D_Vec3dDotProduct(up, &newForward));
+    Vec3d newUp = VEC3D_Vec3dSub(up, &a);
+    newUp = VEC3D_Vec3dNormalize(&newUp);
+
+    Vec3d newRight = VEC3D_Vec3dCrossProduct(&newUp, &newForward);
+
+    Matrix4x4 mat = {0};
+    mat.m[0][0] = newRight.x;   mat.m[0][1] = newRight.y;   mat.m[0][2] = newRight.z;   mat.m[0][3] = 0.0f; 
+    mat.m[1][0] = newUp.x;      mat.m[1][1] = newUp.y;      mat.m[1][2] = newUp.z;      mat.m[1][3] = 0.0f; 
+    mat.m[2][0] = newForward.x; mat.m[2][1] = newForward.y; mat.m[2][2] = newForward.z; mat.m[2][3] = 0.0f; 
+    mat.m[3][0] = pos->x;       mat.m[3][1] = pos->y;       mat.m[3][2] = pos->z;       mat.m[3][3] = 0.0f; 
+    return mat;
+}
+
+Matrix4x4 MATRIX_Matrix4x4QuickInverse(Matrix4x4 *m){
+    Matrix4x4 mat = {0};
+    // 1) Transpose rotation submatrix
+    mat.m[0][0] = m->m[0][0]; mat.m[0][1] = m->m[1][0]; mat.m[0][2] = m->m[2][0]; mat.m[0][3] = 0.0f;
+    mat.m[1][0] = m->m[0][1]; mat.m[1][1] = m->m[1][1]; mat.m[1][2] = m->m[2][1]; mat.m[1][3] = 0.0f;
+    mat.m[2][0] = m->m[0][2]; mat.m[2][1] = m->m[1][2]; mat.m[2][2] = m->m[2][2]; mat.m[2][3] = 0.0f;
+    // 2) Compute inverse translation into the last row
+    mat.m[3][0] = -(m->m[3][0] * mat.m[0][0] + m->m[3][1] * mat.m[1][0] + m->m[3][2] * mat.m[2][0]);
+    mat.m[3][1] = -(m->m[3][0] * mat.m[0][1] + m->m[3][1] * mat.m[1][1] + m->m[3][2] * mat.m[2][1]);
+    mat.m[3][2] = -(m->m[3][0] * mat.m[0][2] + m->m[3][1] * mat.m[1][2] + m->m[3][2] * mat.m[2][2]);
+    mat.m[3][3] = 1.0f;
     return mat;
 }
