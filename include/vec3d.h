@@ -56,8 +56,8 @@ float            VEC3D_Vec3dLength(Vec3d *v);
 
 
 //MeshCube
-//MeshCube         VEC3D_CreateUnitCube(); 
-void             VEC3D_DestroyCube(MeshCube c);
-TriangleVector   VEC3D_GetCubeTriangles(MeshCube c);
+// //MeshCube         VEC3D_CreateUnitCube(); 
+// void             VEC3D_DestroyCube(MeshCube c);
+// TriangleVector   VEC3D_GetCubeTriangles(MeshCube c);
 
 #endif

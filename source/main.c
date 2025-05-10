@@ -30,19 +30,14 @@ int main(int argc, char **argv){
 
     uint32_t startTicks = SDL_GetTicks();
     while (g.programIsRunning) {
-        // elapsed time drives rotation
         uint32_t now  = SDL_GetTicks();
         float    secs = (now - startTicks) / 3000.0f;
 
-        // — build rotation matrices —
         Matrix4x4 matRotZ = MATRIX_Matrix4x4RotateZ(secs * 2.0f * M_PI);
-        Matrix4x4 matRotX = MATRIX_Matrix4x4RotateX(secs *       M_PI);
+        Matrix4x4 matRotX = MATRIX_Matrix4x4RotateX(secs * M_PI);
 
-        // — build translation 5 units into screen —
-        Matrix4x4 matTrans = MATRIX_Matrix4x4MakeTranslatio(0.0f, 0.0f, 16.0f);
+        Matrix4x4 matTrans = MATRIX_Matrix4x4MakeTranslatio(0.0f, 0.0f, 12.0f);
 
-        // — combine into one World matrix —
-        //   World = Identity → RotateZ → RotateX → Translate
         Matrix4x4 matWorld = MATRIX_Matrix4x4Identity();
         matWorld = MATRIX_Matrix4x4MultiplyMatrix(&matRotZ, &matRotX);
         matWorld = MATRIX_Matrix4x4MultiplyMatrix(&matWorld, &matTrans);
@@ -57,9 +52,9 @@ int main(int argc, char **argv){
         DRAW3D_MeshRender(
             g.pRend,
             e3D.mesh,
-            matWorld,          // <- world transform
-            e3D.matProj,       // <- projection
-            e3D.vCamera        // <- camera pos (w=1!)
+            matWorld,          
+            e3D.matProj,     
+            e3D.vCamera      
         );
         SDL_RenderPresent(g.pRend);
     }

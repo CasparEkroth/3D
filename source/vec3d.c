@@ -90,15 +90,15 @@ Triangle VEC3D_TriangleVectorGetAt(TriangleVector tv, size_t index) {
 //     return c;
 // }
 
-void VEC3D_DestroyCube(MeshCube c) {
-    if (!c) return;
-    VEC3D_TriangleVectorDestroy(c->tris);
-    free(c);
-}
+// void VEC3D_DestroyCube(MeshCube c) {
+//     if (!c) return;
+//     VEC3D_TriangleVectorDestroy(c->tris);
+//     free(c);
+// }
 
-TriangleVector VEC3D_GetCubeTriangles(MeshCube c) {
-    return c ? c->tris : NULL;
-}
+// TriangleVector VEC3D_GetCubeTriangles(MeshCube c) {
+//     return c ? c->tris : NULL;
+// }
 
 void VEC3D_Vec3dNormal(Vec3d* normal, const Triangle *tri){
     Vec3d line1, line2;
