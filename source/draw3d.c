@@ -52,94 +52,10 @@ void DRAW3D_DrawFillTriangle(SDL_Renderer* pRend, SDL_Point v0, SDL_Point v1, SD
     }
 }
 
-void DRAW3D_CubeRender(
-    SDL_Renderer *pRend,
-    MeshCube      cube,
-    Matrix4x4     matRotZ,
-    Matrix4x4     matRotX,
-    Matrix4x4     matProj,
-    Vec3d         vCamera
-) {
-    // 1) pull out your triangles
-    int w, h;
-    SDL_GetRendererOutputSize(pRend, &w, &h);
-    TriangleVector tv    = VEC3D_GetCubeTriangles(cube);
-    size_t         count = VEC3D_TriangleVectorSize(tv);
-    const Triangle *tris = VEC3D_TriangleVectorData(tv);
-
-    // 2) for each triangle, do Z‑rotate, X‑rotate, translate, project, draw
-    for (size_t i = 0; i < count; i++) {
-        Triangle in        = tris[i];
-        Triangle rz, rxz, trans, proj;
-
-        // rotate Z
-        VEC3D_Matrix4x4MultiplyVector(&in.p[0], &rz.p[0], &matRotZ);
-        VEC3D_Matrix4x4MultiplyVector(&in.p[1], &rz.p[1], &matRotZ);
-        VEC3D_Matrix4x4MultiplyVector(&in.p[2], &rz.p[2], &matRotZ);
-
-        // rotate X
-        VEC3D_Matrix4x4MultiplyVector(&rz.p[0], &rxz.p[0], &matRotX);
-        VEC3D_Matrix4x4MultiplyVector(&rz.p[1], &rxz.p[1], &matRotX);
-        VEC3D_Matrix4x4MultiplyVector(&rz.p[2], &rxz.p[2], &matRotX);
-
-        // translate forward
-        trans = rxz;
-        trans.p[0].z += 3.0f;
-        trans.p[1].z += 3.0f;
-        trans.p[2].z += 3.0f;
-
-        Vec3d normal;
-        VEC3D_Vec3dNormal(&normal,&trans);
-        Vec3d cameraRay = {
-            trans.p[0].x - vCamera.x,
-            trans.p[0].y - vCamera.y,
-            trans.p[0].z - vCamera.z 
-        };
-        float dp = normal.x * cameraRay.x + normal.y * cameraRay.y + normal.z * cameraRay.z;
-
-        if(dp < 0.0f){
-            //light
-            Vec3d light_direction = {.x = 0.0f, .y = 0.0f, .z = -1.0f};
-            VEC3D_Vec3dNormalize(&light_direction);
-            float dp_light = normal.x * light_direction.x + normal.y * light_direction.y + normal.z * light_direction.z;
-            const float ambient = 0.1f;
-            if (dp_light < 0.0f) dp_light = 0.0f;
-            trans.shade = (uint8_t)((ambient + (1.0f-ambient)*dp_light) * 255.0f);
-            // project into 2D
-            VEC3D_Matrix4x4MultiplyVector(&trans.p[0], &proj.p[0], &matProj);
-            VEC3D_Matrix4x4MultiplyVector(&trans.p[1], &proj.p[1], &matProj);
-            VEC3D_Matrix4x4MultiplyVector(&trans.p[2], &proj.p[2], &matProj);
-
-            SDL_GetRendererOutputSize(pRend, &w, &h);
-            for (int j = 0; j < 3; j++) {
-                proj.p[j].x = (proj.p[j].x + 1.0f) * 0.5f * w;
-                proj.p[j].y = (proj.p[j].y + 1.0f) * 0.5f * h;
-            }
-
-            // finally draw it
-            DRAW3D_DrawFillTriangle(pRend,
-            (SDL_Point){.x = (int)proj.p[0].x, .y = (int)proj.p[0].y},
-            (SDL_Point){.x = (int)proj.p[1].x, .y = (int)proj.p[1].y},
-            (SDL_Point){.x = (int)proj.p[2].x, .y = (int)proj.p[2].y},
-            trans.shade
-            );
-            // DRAW3D_DrawTriangle(
-            //     (int)proj.p[0].x, (int)proj.p[0].y,
-            //     (int)proj.p[1].x, (int)proj.p[1].y,
-            //     (int)proj.p[2].x, (int)proj.p[2].y,
-            //     pRend,
-            //     trans.shede
-            // );
-        }
-    }
-}
-
-
 void DRAW3D_MeshRender(
     SDL_Renderer*    pRend,
-    TriangleVector  mesh,
-    Matrix4x4        matRotZ,
-    Matrix4x4        matRotX,
+    TriangleVector   mesh,
+    Matrix4x4        matWorld,
     Matrix4x4        matProj,
     Vec3d            vCamera
 ) {
@@ -152,62 +68,58 @@ void DRAW3D_MeshRender(
     sortTri = VEC3D_TriangleVectorCreate();
     for (size_t i = 0; i < count; i++) {
         // Fetch & transform the triangle
-        Triangle in   = tris[i];
-        Triangle rz, rxz, trans, proj;
+        Triangle in        = tris[i];
+        Triangle  triProjected, triTransformd;
+        // rotate
+        triTransformd.p[0] = MATRIX_Matrix4x4MultiplyVector(&in.p[0], &matWorld);
+        triTransformd.p[1] = MATRIX_Matrix4x4MultiplyVector(&in.p[1], &matWorld);
+        triTransformd.p[2] = MATRIX_Matrix4x4MultiplyVector(&in.p[2], &matWorld);
 
-        // Rotate Z
-        VEC3D_Matrix4x4MultiplyVector(&in.p[0], &rz.p[0], &matRotZ);
-        VEC3D_Matrix4x4MultiplyVector(&in.p[1], &rz.p[1], &matRotZ);
-        VEC3D_Matrix4x4MultiplyVector(&in.p[2], &rz.p[2], &matRotZ);
+        Vec3d normal,line1,line2;
+        line1 = VEC3D_Vec3dSub(&triTransformd.p[1],&triTransformd.p[0]);
+        line2 = VEC3D_Vec3dSub(&triTransformd.p[2],&triTransformd.p[0]);
 
-        // Rotate X
-        VEC3D_Matrix4x4MultiplyVector(&rz.p[0], &rxz.p[0], &matRotX);
-        VEC3D_Matrix4x4MultiplyVector(&rz.p[1], &rxz.p[1], &matRotX);
-        VEC3D_Matrix4x4MultiplyVector(&rz.p[2], &rxz.p[2], &matRotX);
+        normal = VEC3D_Vec3dCrossProduct(&line1, &line2);
 
-        // Translate out of camera
-        trans = rxz;
-        for (int j = 0; j < VEC3D_TRIANGLE_SIZE; j++)
-            trans.p[j].z += 8.0f;
+        normal = VEC3D_Vec3dNormalize(&normal);
 
-        // Back‑face cull
-        Vec3d normal;
-        VEC3D_Vec3dNormal(&normal, &trans);
+        Vec3d vCameraRay = VEC3D_Vec3dSub(&triTransformd.p[0],&vCamera);
 
-        Vec3d cameraRay = {
-            trans.p[0].x - vCamera.x,
-            trans.p[0].y - vCamera.y,
-            trans.p[0].z - vCamera.z
-        };
-        float dp = normal.x*cameraRay.x
-                 + normal.y*cameraRay.y
-                 + normal.z*cameraRay.z;
-        if (dp >= 0.0f) continue;
+        if(VEC3D_Vec3dDotProduct(&normal,&vCameraRay) < 0.0f){
+            Vec3d light_dir = {0.0f,0.0f,-1.0f,1.0f};
+            light_dir = VEC3D_Vec3dNormalize(&light_dir);
 
-        // Lighting
-        Vec3d light_dir = {0,0,-1};
-        VEC3D_Vec3dNormalize(&light_dir);
-        float dp_light = normal.x*light_dir.x + normal.y*light_dir.y + normal.z*light_dir.z;
-        if (dp_light < 0.0f) dp_light = 0.0f;
-        const float ambient = 0.1f;
-        uint8_t shade = (uint8_t)((ambient + (1.0f-ambient)*dp_light)*255);
-        trans.shade = shade;
-        // Project
-        for (int j = 0; j < VEC3D_TRIANGLE_SIZE; j++) {
-            VEC3D_Matrix4x4MultiplyVector(&trans.p[j], &proj.p[j], &matProj);
-            proj.p[j].x = (proj.p[j].x + 1.0f)*0.5f * w;
-            proj.p[j].y = (proj.p[j].y + 1.0f)*0.5f * h;
+            float dp_light = fmaxf(0.1f,VEC3D_Vec3dDotProduct(&normal,&light_dir));
+            const float ambient = 0.1f;
+            uint8_t shade = (uint8_t)((ambient + (1.0f-ambient)*dp_light)*255);
+            triTransformd.shade = shade;
+            // 3D --> 2D
+            triProjected.p[0] = MATRIX_Matrix4x4MultiplyVector(&triTransformd.p[0],&matProj);
+            triProjected.p[1] = MATRIX_Matrix4x4MultiplyVector(&triTransformd.p[1],&matProj);
+            triProjected.p[2] = MATRIX_Matrix4x4MultiplyVector(&triTransformd.p[2],&matProj);
+            triProjected.shade = triTransformd.shade;
+
+            triProjected.p[0] = VEC3D_Vec3dDiv(&triProjected.p[0],triProjected.p[0].w);
+            triProjected.p[1] = VEC3D_Vec3dDiv(&triProjected.p[1],triProjected.p[1].w);
+            triProjected.p[2] = VEC3D_Vec3dDiv(&triProjected.p[2],triProjected.p[2].w);
+
+            Vec3d vOffsetView = VEC3D_Vec3dConstructor(1.0f,1.0f,0.0f);
+            triProjected.p[0] = VEC3D_Vec3dAdd(&triProjected.p[0],&vOffsetView);
+            triProjected.p[1] = VEC3D_Vec3dAdd(&triProjected.p[1],&vOffsetView);
+            triProjected.p[2] = VEC3D_Vec3dAdd(&triProjected.p[2],&vOffsetView);
+            for (int i = 0; i < 3; i++){
+                triProjected.p[i].x *= 0.5f * (float)w; 
+                triProjected.p[i].y *= 0.5f * (float)h; 
+            }
+            
+            Triangle screenTri = triProjected;           // copy the projected points
+            screenTri.shade = triProjected.shade;      // bring over the lighting
+            VEC3D_TriangleVectorPush(sortTri, screenTri);
         }
-
         
-        Triangle screenTri = proj;           // copy the projected points
-        screenTri.shade = trans.shade;      // bring over the lighting
-        VEC3D_TriangleVectorPush(sortTri, screenTri);
     }
-
     VEC3D_TriangleVectorSortByMidZ(sortTri);
     size_t sortedCount = VEC3D_TriangleVectorSize(sortTri);
-
     for (size_t i = 0; i < sortedCount; i++){
         // Draw filled triangle
         Triangle tres = VEC3D_TriangleVectorGetAt(sortTri,i);

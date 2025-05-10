@@ -33,7 +33,7 @@ TriangleVector loadFromObjectFile(const char* fileName) {
                     verts = tmp;
                     vCap  = newCap;
                 }
-                verts[vCount++] = (Vec3d){ x,y,z };
+                verts[vCount++] =  VEC3D_Vec3dConstructor(x,y,z);
             }
         }
         // Face?

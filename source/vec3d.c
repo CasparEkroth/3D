@@ -50,45 +50,45 @@ Triangle VEC3D_TriangleVectorGetAt(TriangleVector tv, size_t index) {
     return tv->data[index];
 }
 
-MeshCube VEC3D_CreateUnitCube(void) {
-    MeshCube c = malloc(sizeof *c);
-    if (!c) return NULL;
+// MeshCube VEC3D_CreateUnitCube(void) {
+//     MeshCube c = malloc(sizeof *c);
+//     if (!c) return NULL;
 
-    c->tris = VEC3D_TriangleVectorCreate();
-    if (!c->tris) {
-        free(c);
-        return NULL;
-    }
+//     c->tris = VEC3D_TriangleVectorCreate();
+//     if (!c->tris) {
+//         free(c);
+//         return NULL;
+//     }
 
-    Vec3d v[8] = {
-        {0,0,0}, {1,0,0},
-        {1,1,0}, {0,1,0},
-        {0,0,1}, {1,0,1},
-        {1,1,1}, {0,1,1},
-    };
+//     Vec3d v[8] = {
+//         {0,0,0}, {1,0,0},
+//         {1,1,0}, {0,1,0},
+//         {0,0,1}, {1,0,1},
+//         {1,1,1}, {0,1,1},
+//     };
 
-    int idx[12][3] = {
-      {0,2,1},{0,3,2}, // -Z face
-      {4,5,6},{4,6,7}, // +Z
-      {0,4,7},{0,7,3}, // -X
-      {1,2,6},{1,6,5}, // +X
-      {0,1,5},{0,5,4}, // -Y
-      {3,7,6},{3,6,2}  // +Y
-    };
+//     int idx[12][3] = {
+//       {0,2,1},{0,3,2}, // -Z face
+//       {4,5,6},{4,6,7}, // +Z
+//       {0,4,7},{0,7,3}, // -X
+//       {1,2,6},{1,6,5}, // +X
+//       {0,1,5},{0,5,4}, // -Y
+//       {3,7,6},{3,6,2}  // +Y
+//     };
 
-    for (int i = 0; i < 12; i++) {
-        Triangle t;
-        t.p[0] = v[idx[i][0]];
-        t.p[1] = v[idx[i][1]];
-        t.p[2] = v[idx[i][2]];
-        if (VEC3D_TriangleVectorPush(c->tris, t) != 0) {
-            VEC3D_DestroyCube(c);
-            return NULL;
-        }
-    }
+//     for (int i = 0; i < 12; i++) {
+//         Triangle t;
+//         t.p[0] = v[idx[i][0]];
+//         t.p[1] = v[idx[i][1]];
+//         t.p[2] = v[idx[i][2]];
+//         if (VEC3D_TriangleVectorPush(c->tris, t) != 0) {
+//             VEC3D_DestroyCube(c);
+//             return NULL;
+//         }
+//     }
 
-    return c;
-}
+//     return c;
+// }
 
 void VEC3D_DestroyCube(MeshCube c) {
     if (!c) return;
@@ -98,62 +98,6 @@ void VEC3D_DestroyCube(MeshCube c) {
 
 TriangleVector VEC3D_GetCubeTriangles(MeshCube c) {
     return c ? c->tris : NULL;
-}
-
-void VEC3D_Matrix4x4Proj(Matrix4x4 * matProj,SDL_Window *pWin){
-    int sw = 0,sh = 0;
-    SDL_GetWindowSize(pWin, &sw, &sh);
-    for (int r = 0; r < 4; r++)
-        for (int c = 0; c < 4; c++)
-            matProj->m[r][c] = 0.0f;
-
-    float fAspectRatio = (float)sh / (float)sw;
-    matProj->m[0][0] = fAspectRatio * fFOV_RAD;
-    matProj->m[1][1] = fFOV_RAD;
-    matProj->m[2][2] = fFAR / (fFAR -fNEAR);
-    matProj->m[3][2] = (-fFAR * fNEAR) / (fFAR -fNEAR);
-    matProj->m[2][3] = 1.0f;
-    matProj->m[3][3] = 1.0f;
-}
-
-void VEC3D_Matrix4x4MultiplyVector(const Vec3d *in, Vec3d *out, const Matrix4x4 *m){
-    float x = in->x * m->m[0][0] + in->y * m->m[1][0] + in->z * m->m[2][0] + 1.0f * m->m[3][0];
-    float y = in->x * m->m[0][1] + in->y * m->m[1][1] + in->z * m->m[2][1] + 1.0f * m->m[3][1];
-    float z = in->x * m->m[0][2] + in->y * m->m[1][2] + in->z * m->m[2][2] + 1.0f * m->m[3][2];
-    float w = in->x * m->m[0][3] + in->y * m->m[1][3] + in->z * m->m[2][3] + 1.0f * m->m[3][3];
-    if (w != 0.0f) {
-        out->x = x / w;
-        out->y = y / w;
-        out->z = z / w;
-    } else {
-        out->x = x;
-        out->y = y;
-        out->z = z;
-    }
-}
-
-static void VEC3D_Matrix4x4Identity(Matrix4x4* mat) {
-    for (int r = 0; r < 4; r++)
-        for (int c = 0; c < 4; c++)
-            mat->m[r][c] = (r == c) ? 1.0f : 0.0f;
-}
-
-void VEC3D_Matrix4x4RotateZ(Matrix4x4* mat, float theta) {
-    float c = cosf(theta);
-    float s = sinf(theta);
-    VEC3D_Matrix4x4Identity(mat);
-    mat->m[0][0] =  c;  mat->m[0][1] = -s;
-    mat->m[1][0] =  s;  mat->m[1][1] =  c;
-    // z row/column and bottom row stay identity
-}
-
-void VEC3D_Matrix4x4RotateX(Matrix4x4* mat, float theta) {
-    float c = cosf(theta);
-    float s = sinf(theta);
-    VEC3D_Matrix4x4Identity(mat);
-    mat->m[1][1] =  c;  mat->m[1][2] = -s;
-    mat->m[2][1] =  s;  mat->m[2][2] =  c;
-    // x row/column and bottom row stay identity
 }
 
 void VEC3D_Vec3dNormal(Vec3d* normal, const Triangle *tri){
@@ -175,22 +119,7 @@ void VEC3D_Vec3dNormal(Vec3d* normal, const Triangle *tri){
     VEC3D_Vec3dNormalize(normal);
 }
 
-void VEC3D_Vec3dNormalize(Vec3d *vec){
-        float len = sqrtf(
-        vec->x*vec->x +
-        vec->y*vec->y +
-        vec->z*vec->z
-    );
-    if (len > 1e-6f) {
-        vec->x /= len;
-        vec->y /= len;
-        vec->z /= len;
-    } else {
-        // degenerate triangle: point vec straight out Z
-        vec->x = vec->y = 0.0f;
-        vec->z = 1.0f;
-    }
-}
+
 
 static int compare_mid_z(const void *a, const void *b) {
     const Triangle *t1 = (const Triangle*)a;
@@ -210,4 +139,41 @@ void VEC3D_TriangleVectorSortByMidZ(TriangleVector tv){
         sizeof(tv->data[0]),
         compare_mid_z
     );
+}
+
+Vec3d VEC3D_Vec3dAdd(Vec3d *v1, Vec3d *v2){
+    return (Vec3d){.x = (v1->x + v2->x),.y = (v1->y + v2->y),.z = (v1->z + v2->z)};
+}
+
+Vec3d VEC3D_Vec3dSub(Vec3d *v1, Vec3d *v2){
+    return (Vec3d){.x = (v1->x - v2->x),.y = (v1->y - v2->y),.z = (v1->z - v2->z)};
+}
+
+Vec3d VEC3D_Vec3dMul(Vec3d *v1, float k){
+    return (Vec3d){.x = (v1->x * k),.y = (v1->y * k),.z = (v1->z * k)};
+}
+
+Vec3d VEC3D_Vec3dDiv(Vec3d *v1, float k){
+    return (Vec3d){.x = (v1->x / k),.y = (v1->y / k),.z = (v1->z / k)};
+}
+
+float VEC3D_Vec3dDotProduct(Vec3d *v1, Vec3d *v2){
+    return (float)(v1->x * v2->x + v1->y * v2->y + v1->z * v2->z);
+}
+
+Vec3d VEC3D_Vec3dCrossProduct(Vec3d *v1, Vec3d *v2){
+    Vec3d v;
+    v.x = v1->y * v2->z - v1->z * v2->y;
+    v.y = v1->z * v2->x - v1->x * v2->z;
+    v.z = v1->x * v2->y - v1->y * v2->x;
+    return v;
+}
+
+float VEC3D_Vec3dLength(Vec3d *v){
+    return sqrtf(VEC3D_Vec3dDotProduct(v,v));
+}
+
+Vec3d VEC3D_Vec3dNormalize(Vec3d *v){
+    float l = VEC3D_Vec3dLength(v);
+    return (Vec3d){.x = v->x / l, .y = v->y / l, .z = v->z / l};
 }
