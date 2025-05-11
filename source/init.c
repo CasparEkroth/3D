@@ -1,7 +1,7 @@
 #include "../include/init.h"
 
 bool initialize_window(Game *pGame){ // Initialiserar SDL och skapar fönster
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0 || TTF_Init() != 0 || SDL_Init(SDL_INIT_AUDIO) < 0){
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0 || TTF_Init() != 0 ){
         fprintf(stderr, "Error initializing SDL. %s\n", SDL_GetError());
         return false;
     }
@@ -43,7 +43,7 @@ void close_SDL(SDL_Window* pWindow,SDL_Renderer *pRenderer, Game *pGame){
     SDL_Quit();
 }
 
-void input(SDL_Event *event,Game* pGame){
+void input(SDL_Event *event,Game* pGame,float *fYaw, float* fPitch){
     while (SDL_PollEvent(event)){
         switch (event->type){
         case SDL_QUIT:
@@ -54,6 +54,16 @@ void input(SDL_Event *event,Game* pGame){
             break;
         case SDL_KEYUP:
             pGame->keys[event->key.keysym.scancode] = false; 
+            break;
+        case SDL_MOUSEMOTION:
+            // e.motion.xrel, yrel are relative movement since last frame
+            const float sensitivity = 0.0025f; // tweak to taste
+            *fYaw   += (float)(event->motion.xrel * sensitivity);
+            *fPitch -= (float)(event->motion.yrel * sensitivity);
+            // clamp pitch so you don't flip upside-down
+            if (*fPitch >  1.5f) *fPitch =  1.5f;
+            if (*fPitch < -1.5f) *fPitch = -1.5f;
+            break;
         default:
             break;
         }

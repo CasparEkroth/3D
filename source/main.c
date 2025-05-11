@@ -12,6 +12,8 @@ typedef struct engine3D {
     Matrix4x4      matProj;
     Vec3d          vCamera;
     Vec3d          vLookDir;
+    Vec3d          vRight;
+    Vec3d          vUp;
     float          fYaw;
     float          fPitch;
 } Engine3D;
@@ -26,7 +28,9 @@ int main(int argc, char **argv){
     Engine3D e3D = {0};
 
     if (!initialize_window(&g)) return 1;
+    SDL_ShowCursor(SDL_FALSE);
     SDL_SetRelativeMouseMode(SDL_TRUE);
+
     g.programIsRunning = true;
     g.fElapsedTime = 0.0f;
 
@@ -38,40 +42,36 @@ int main(int argc, char **argv){
         fprintf(stderr, "Error: mesh has zero triangles!\n");
         return 1;
     }
-    e3D.vCamera = (Vec3d){ 0.0f, 0.0f, 0.0f, 1.0f };  
+    e3D.vCamera = VEC3D_DEFAULT;  
     e3D.vLookDir = VEC3D_Vec3dConstructor(0,0,1.0f);
     e3D.fYaw = 0.0f;
     e3D.fPitch = 0.0f;
+    uint32_t lastTick = SDL_GetTicks();
     int sw, sh;
     SDL_GetWindowSize(g.pWindow, &sw, &sh);
     e3D.matProj = MATRIX_Matrix4x4MakeProjection(90.0f, (float)sw/(float)sh, fNEAR, fFAR);
 
-    uint32_t lastTick = SDL_GetTicks();
     while (g.programIsRunning) {
         uint32_t now = SDL_GetTicks();
         g.fElapsedTime = (now - lastTick) / 1000.0f;   // convert ms→s
         lastTick = now;
+
+        input(&event, &g,&e3D.fYaw,&e3D.fPitch);
+        update(&g,&e3D);
+
+        // — Build world matrix for mesh —
         Matrix4x4 matRotZ = MATRIX_Matrix4x4RotateZ(0 * 2.0f * M_PI);
         Matrix4x4 matRotX = MATRIX_Matrix4x4RotateX(0 * M_PI);
-
         Matrix4x4 matTrans = MATRIX_Matrix4x4MakeTranslatio(0.0f, 0.0f, 5.0f);
-
         Matrix4x4 matWorld = MATRIX_Matrix4x4Identity();
         matWorld = MATRIX_Matrix4x4MultiplyMatrix(&matRotZ, &matRotX);
         matWorld = MATRIX_Matrix4x4MultiplyMatrix(&matWorld, &matTrans);
 
-        Vec3d vUp = VEC3D_Vec3dConstructor(0, 1.0f, 0);
-        Vec3d vTarget = VEC3D_Vec3dConstructor(0, 0, 1.0f);
-        Matrix4x4 matCameraRot = MATRIX_Matrix4x4RotateY(e3D.fYaw);
-        e3D.vLookDir = MATRIX_Matrix4x4MultiplyVector(&vTarget, &matCameraRot);
-        vTarget = VEC3D_Vec3dAdd(&e3D.vCamera, &e3D.vLookDir);
-
-        Matrix4x4 matCamera = MATRIX_Matrix4x4PointAt(&e3D.vCamera, &vTarget, &vUp);
-
+        // — Build view matrix from camera —
+        Vec3d vTarget =  VEC3D_Vec3dAdd(&e3D.vCamera, &e3D.vLookDir);
+        Matrix4x4 matCamera = MATRIX_Matrix4x4PointAt(&e3D.vCamera, &vTarget, &e3D.vUp);
         Matrix4x4 matView = MATRIX_Matrix4x4QuickInverse(&matCamera);
 
-        input(&event, &g);
-        update(&g,&e3D);
         SDL_SetRenderDrawColor(g.pRend, 0, 0, 0, 255);
         SDL_RenderClear(g.pRend);
 
@@ -93,18 +93,44 @@ int main(int argc, char **argv){
 }
 
 void update(Game *pGame,Engine3D *e3D){
-    int dx, dy;
-    SDL_GetRelativeMouseState(&dx, &dy);
+    static const Vec3d vWorldUp = { 0.0f, 1.0f, 0.0f, 1.0f};
+    Vec3d vForward = VEC3D_Vec3dConstructor(0,0,0);
+    vForward.x = cosf(e3D->fPitch) * sinf(e3D->fYaw);
+    vForward.y = sinf(e3D->fPitch);
+    vForward.z = cosf(e3D->fPitch) * cosf(e3D->fYaw);
+    VEC3D_Vec3dNormalize(&vForward);
+    e3D->vLookDir = vForward;
+    // Up = Right × Forward
+    e3D->vRight = VEC3D_Vec3dCrossProduct(&e3D->vLookDir, &vWorldUp);
+    VEC3D_Vec3dNormalize(&e3D->vRight);
+    e3D->vUp = VEC3D_Vec3dCrossProduct(&e3D->vRight, &e3D->vLookDir);
+    VEC3D_Vec3dNormalize(&e3D->vUp);
 
-    Vec3d vForward = VEC3D_Vec3dMul(&e3D->vLookDir, 8.0f * pGame->fElapsedTime);
+    const float fSpeed = 8.0f * pGame->fElapsedTime;
+    Vec3d vMove  = VEC3D_Vec3dConstructor(0,0,0);
+    Vec3d tmp = VEC3D_Vec3dConstructor(0,0,0);
 
-    const float rotSpeed = 1.0f;
-    if (pGame->keys[SDL_SCANCODE_D]) e3D->fYaw -= rotSpeed * pGame->fElapsedTime;
-    if (pGame->keys[SDL_SCANCODE_A]) e3D->fYaw += rotSpeed * pGame->fElapsedTime;
-
-    if(pGame->keys[SDL_SCANCODE_W]) e3D->vCamera = VEC3D_Vec3dAdd(&e3D->vCamera,&vForward);
-    if(pGame->keys[SDL_SCANCODE_S]) e3D->vCamera = VEC3D_Vec3dSub(&e3D->vCamera,&vForward);
-    
-    if(pGame->keys[SDL_SCANCODE_UP]) e3D->vCamera.y -= 8.0f * pGame->fElapsedTime;
-    if(pGame->keys[SDL_SCANCODE_DOWN]) e3D->vCamera.y += 8.0f * pGame->fElapsedTime;
+    if (pGame->keys[SDL_SCANCODE_W]){
+        tmp = VEC3D_Vec3dMul(&e3D->vLookDir,  fSpeed);
+        vMove = VEC3D_Vec3dAdd(&vMove, &tmp);
+    } 
+    if (pGame->keys[SDL_SCANCODE_S]){
+        tmp = VEC3D_Vec3dMul(&e3D->vLookDir, -fSpeed);
+        vMove = VEC3D_Vec3dAdd(&vMove, &tmp);
+    } 
+    if (pGame->keys[SDL_SCANCODE_D]){
+        tmp = VEC3D_Vec3dMul(&e3D->vRight, fSpeed);
+        vMove = VEC3D_Vec3dAdd(&vMove, &tmp);
+    } 
+    if (pGame->keys[SDL_SCANCODE_A]){
+        tmp = VEC3D_Vec3dMul(&e3D->vRight, -fSpeed);
+        vMove = VEC3D_Vec3dAdd(&vMove, &tmp);
+    } 
+    if (pGame->keys[SDL_SCANCODE_LSHIFT]){
+        vMove.y -= fSpeed;
+    }
+    if(pGame->keys[SDL_SCANCODE_SPACE]){
+        vMove.y += fSpeed;
+    }
+    e3D->vCamera = VEC3D_Vec3dAdd(&e3D->vCamera, &vMove);
 }

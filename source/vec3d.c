@@ -232,5 +232,5 @@ int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Trian
         out_tri2->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[1], outside_points[0]);
         return 2;
     }
-    
+    printf("out of bound\n");
 }

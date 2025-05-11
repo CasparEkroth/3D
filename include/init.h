@@ -29,7 +29,8 @@ typedef struct{
 bool initialize_window(Game *pGame);
 
 
-void input(SDL_Event *event,Game* pGame);
+void input(SDL_Event *event,Game* pGame,float *fYaw, float* fPitch);
+
 
 void close_SDL(SDL_Window* pWindow,SDL_Renderer *pRend, Game *pGame);
 
