@@ -177,3 +177,61 @@ Vec3d VEC3D_Vec3dNormalize(Vec3d *v){
     float l = VEC3D_Vec3dLength(v);
     return (Vec3d){.x = v->x / l, .y = v->y / l, .z = v->z / l};
 }
+
+Vec3d VEC3D_Vec3dIntersectPlane(Vec3d *plane_p, Vec3d *plane_n, Vec3d *lineStart, Vec3d *lineEnd){
+    *plane_n = VEC3D_Vec3dNormalize(plane_n);
+    float plane_d = -VEC3D_Vec3dDotProduct(plane_n, plane_p);
+    float ad = VEC3D_Vec3dDotProduct(lineStart, plane_n);
+    float bd = VEC3D_Vec3dDotProduct(lineEnd, plane_n);
+    float t = (-plane_d - ad) / (bd - ad);
+    Vec3d lineStartToEnd = VEC3D_Vec3dSub(lineEnd, lineStart);
+    Vec3d lineToIntersect = VEC3D_Vec3dMul(&lineStartToEnd, t);
+    return VEC3D_Vec3dAdd(lineStart, &lineToIntersect);
+}
+
+static float VEC3D_DistanceToPlane(Vec3d plane_p, Vec3d plane_n, Vec3d p){
+    return (plane_n.x * p.x + plane_n.y * p.y + plane_n.z * p.z) - VEC3D_Vec3dDotProduct(&plane_n, &plane_p);
+}
+
+int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Triangle *out_tri1, Triangle *out_tri2){
+    plane_n = VEC3D_Vec3dNormalize(&plane_n);
+    float dist[3];
+    for (int i = 0; i < 3; i++){
+        dist[i]  = VEC3D_DistanceToPlane(plane_p, plane_n, in_tri->p[i]);
+    }
+    Vec3d* inside_points[3];  int nInsidePointCount = 0;
+    Vec3d* outside_points[3]; int nOutsidePointCount = 0;
+    for (int i = 0; i < 3; i++){
+        if(dist[i] >= 0){ inside_points[nInsidePointCount++] = &in_tri->p[i]; }
+        else { outside_points[nOutsidePointCount++] = &in_tri->p[i]; }
+    }
+    if (nInsidePointCount == 0){
+        return 0;
+    }
+    if(nInsidePointCount == 3){
+        *out_tri1 = *in_tri;
+        return 1;
+    }
+    if(nInsidePointCount == 1 && nOutsidePointCount == 2){
+        out_tri1->shade = in_tri->shade;
+        out_tri1->p[0] = *inside_points[0];
+        out_tri1->p[1] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0],outside_points[0]);
+        out_tri1->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0],outside_points[1]);
+        return 1;
+    }
+    if(nInsidePointCount == 2 && nOutsidePointCount == 1){
+        out_tri1->shade = in_tri->shade;
+        out_tri2->shade = in_tri->shade;
+
+
+        out_tri1->p[0] = *inside_points[0];
+        out_tri1->p[1] = *inside_points[1];
+        out_tri1->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0], outside_points[0]);
+
+        out_tri2->p[0] = *inside_points[1];
+        out_tri2->p[1] = out_tri1->p[2];
+        out_tri2->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[1], outside_points[0]);
+        return 2;
+    }
+    printf("out of bound\n");
+}

@@ -53,6 +53,8 @@ float            VEC3D_Vec3dDotProduct(Vec3d *v1, Vec3d *v2);
 void             VEC3D_Vec3dNormal(Vec3d* normal, const Triangle *trans);
 Vec3d            VEC3D_Vec3dNormalize(Vec3d *v);
 float            VEC3D_Vec3dLength(Vec3d *v);
+Vec3d            VEC3D_Vec3dIntersectPlane(Vec3d *plane_p, Vec3d *plane_n, Vec3d *lineStart, Vec3d *lineEnd);
+int              VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Triangle *out_tri1, Triangle *out_tri2);
 
 
 //MeshCube
