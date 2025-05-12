@@ -223,11 +223,12 @@ int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Trian
         out_tri1->shade = in_tri->shade;
         out_tri2->shade = in_tri->shade;
 
+
         out_tri1->p[0] = *inside_points[0];
         out_tri1->p[1] = *inside_points[1];
         out_tri1->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0], outside_points[0]);
 
-        out_tri2->p[0] = *inside_points[0];
+        out_tri2->p[0] = *inside_points[1];
         out_tri2->p[1] = out_tri1->p[2];
         out_tri2->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[1], outside_points[0]);
         return 2;

@@ -70,5 +70,3 @@ void input(SDL_Event *event,Game* pGame,float *fYaw, float* fPitch){
     }
     if(pGame->keys[SDL_SCANCODE_ESCAPE]) pGame->programIsRunning = false;
 }
-
-

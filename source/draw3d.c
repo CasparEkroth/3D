@@ -139,16 +139,16 @@ void DRAW3D_MeshRender(
 
         // 2) define the four screen‐edge planes
         Vec3d planePnts[4] = {
-            { 0,      0,   0, 1 },   // top edge y =   0
-            { 0,   h - 1,  0, 1 },   // bottom y = h–1
-            { 0,      0,   0, 1 },   // left   x =   0
-            { w - 1,  0,   0, 1 }    // right  x = w–1
+            { 0, 0, 0, 1.0f },   // top edge y =   0
+            { 0, (float)h-1.0f, 0, 1.0f },   // bottom y = h–1
+            { 0, 0, 0, 1.0f },   // left   x =   0
+            { (float)w-1.0f ,0, 0, 1.0f }    // right  x = w–1
         };
         Vec3d planeNrms[4] = {
-            {  0,  1, 0, 1 },
-            {  0, -1, 0, 1 },
-            {  1,  0, 0, 1 },
-            { -1,  0, 0, 1 }
+            {  0,  1.0f, 0, 1.0f },
+            {  0, -1.0f, 0, 1.0f },
+            {  1.0f,  0, 0, 1.0f },
+            { -1.0f,  0, 0, 1.0f }
         };
 
         // 3) clip against each plane in turn
@@ -183,5 +183,4 @@ void DRAW3D_MeshRender(
         VEC3D_TriangleVectorDestroy(list);
     }
     VEC3D_TriangleVectorDestroy(sortTri);
-
 }
