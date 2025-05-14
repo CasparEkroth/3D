@@ -53,7 +53,7 @@ int main(int argc, char **argv){
 
     while (g.programIsRunning) {
         uint32_t now = SDL_GetTicks();
-        g.fElapsedTime = (now - lastTick) / 1000.0f;   // convert ms→s
+        g.fElapsedTime = (now - lastTick) / 1000.0f;   
         lastTick = now;
 
         input(&event, &g,&e3D.fYaw,&e3D.fPitch);
@@ -100,7 +100,6 @@ void update(Game *pGame,Engine3D *e3D){
     vForward.z = cosf(e3D->fPitch) * cosf(e3D->fYaw);
     VEC3D_Vec3dNormalize(&vForward);
     e3D->vLookDir = vForward;
-    // Up = Right × Forward
     e3D->vRight = VEC3D_Vec3dCrossProduct(&e3D->vLookDir, &vWorldUp);
     VEC3D_Vec3dNormalize(&e3D->vRight);
     e3D->vUp = VEC3D_Vec3dCrossProduct(&e3D->vRight, &e3D->vLookDir);

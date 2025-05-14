@@ -37,7 +37,6 @@ void DRAW3D_DrawFillTriangle(SDL_Renderer* pRend, SDL_Point v0, SDL_Point v1, SD
     }
     if (v2.y > v1.y) {
         float dx12 = (float)(v2.x - v1.x) / (float)(v2.y - v1.y);
-        // reset xl to the long edge at scanline v1.y
         xl = v0.x + dx02 * (float)(v1.y - v0.y);
         xr = v1.x;
         for (int y = v1.y; y <= v2.y; y++) {
@@ -132,12 +131,10 @@ void DRAW3D_MeshRender(
     // Sort & draw
     VEC3D_TriangleVectorSortByMidZ(sortTri);
     for (size_t ti = 0; ti < VEC3D_TriangleVectorSize(sortTri); ti++) {
-        // 1) start with exactly one triangle
         Triangle t0 = VEC3D_TriangleVectorGetAt(sortTri, ti);
         TriangleVector list = VEC3D_TriangleVectorCreate();
         VEC3D_TriangleVectorPush(list, t0);
 
-        // 2) define the four screen‐edge planes
         Vec3d planePnts[4] = {
             { 0, 0, 0, 1.0f },   // top edge y =   0
             { 0, (float)h-1.0f, 0, 1.0f },   // bottom y = h–1
@@ -151,7 +148,6 @@ void DRAW3D_MeshRender(
             { -1.0f,  0, 0, 1.0f }
         };
 
-        // 3) clip against each plane in turn
         for (int p = 0; p < 4; p++) {
             TriangleVector output = VEC3D_TriangleVectorCreate();
             size_t cnt = VEC3D_TriangleVectorSize(list);
@@ -169,7 +165,6 @@ void DRAW3D_MeshRender(
             list = output;
         }
 
-        // 4) whatever remains is guaranteed inside the window—draw it
         for (size_t j = 0; j < VEC3D_TriangleVectorSize(list); j++) {
             Triangle t = VEC3D_TriangleVectorGetAt(list, j);
             DRAW3D_DrawFillTriangle(

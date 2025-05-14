@@ -28,7 +28,6 @@ Matrix4x4 MATRIX_Matrix4x4RotateY(float fAngleRad){
 
 Matrix4x4 MATRIX_Matrix4x4RotateX(float fAngleRad){
     Matrix4x4 m = MATRIX_Matrix4x4Identity();
-    // rotate around X-axis: affects Y and Z
     m.m[1][1] =  cosf(fAngleRad);
     m.m[1][2] = -sinf(fAngleRad);
     m.m[2][1] =  sinf(fAngleRad);
@@ -38,7 +37,6 @@ Matrix4x4 MATRIX_Matrix4x4RotateX(float fAngleRad){
 
 Matrix4x4 MATRIX_Matrix4x4RotateZ(float fAngleRad){
     Matrix4x4 m = MATRIX_Matrix4x4Identity();
-    // rotate around Z-axis: affects X and Y
     m.m[0][0] =  cosf(fAngleRad);
     m.m[0][1] = -sinf(fAngleRad);
     m.m[1][0] =  sinf(fAngleRad);
@@ -97,11 +95,10 @@ Matrix4x4 MATRIX_Matrix4x4PointAt(Vec3d *pos,Vec3d *target, Vec3d *up){
 
 Matrix4x4 MATRIX_Matrix4x4QuickInverse(Matrix4x4 *m){
     Matrix4x4 mat = {0};
-    // 1) Transpose rotation submatrix
     mat.m[0][0] = m->m[0][0]; mat.m[0][1] = m->m[1][0]; mat.m[0][2] = m->m[2][0]; mat.m[0][3] = 0.0f;
     mat.m[1][0] = m->m[0][1]; mat.m[1][1] = m->m[1][1]; mat.m[1][2] = m->m[2][1]; mat.m[1][3] = 0.0f;
     mat.m[2][0] = m->m[0][2]; mat.m[2][1] = m->m[1][2]; mat.m[2][2] = m->m[2][2]; mat.m[2][3] = 0.0f;
-    // 2) Compute inverse translation into the last row
+
     mat.m[3][0] = -(m->m[3][0] * mat.m[0][0] + m->m[3][1] * mat.m[1][0] + m->m[3][2] * mat.m[2][0]);
     mat.m[3][1] = -(m->m[3][0] * mat.m[0][1] + m->m[3][1] * mat.m[1][1] + m->m[3][2] * mat.m[2][1]);
     mat.m[3][2] = -(m->m[3][0] * mat.m[0][2] + m->m[3][1] * mat.m[1][2] + m->m[3][2] * mat.m[2][2]);
