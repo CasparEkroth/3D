@@ -235,3 +235,7 @@ int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Trian
     }
     printf("out of bound\n");
 }
+
+Vec2d VEC2D_Vec2dConstructor(int x, int y){
+    return(Vec2d){.x= x, .y = y, .w = 1};
+}

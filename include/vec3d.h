@@ -17,12 +17,17 @@ typedef struct vec3d{
     float x,y,z,w;
 } Vec3d;
 
+typedef struct vec2d{
+    int x, y, w;
+}Vec2d;
+
 static inline Vec3d VEC3D_Vec3dConstructor(float x, float y, float z){
     return (Vec3d){.w = 1.0f,.x = x,.y = y,.z = z};
 }
 
 typedef struct triangle {
     Vec3d p[COUNT_VEC3D_IN_T];
+    Vec2d uv[COUNT_VEC3D_IN_T];
     uint8_t shade; 
 } Triangle;
 
@@ -56,6 +61,7 @@ float            VEC3D_Vec3dLength(Vec3d *v);
 Vec3d            VEC3D_Vec3dIntersectPlane(Vec3d *plane_p, Vec3d *plane_n, Vec3d *lineStart, Vec3d *lineEnd);
 int              VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Triangle *out_tri1, Triangle *out_tri2);
 
+Vec2d            VEC2D_Vec2dConstructor(int x, int y);
 
 //MeshCube
 // //MeshCube         VEC3D_CreateUnitCube(); 
