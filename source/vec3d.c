@@ -178,14 +178,15 @@ Vec3d VEC3D_Vec3dNormalize(Vec3d *v){
     return (Vec3d){.x = v->x / l, .y = v->y / l, .z = v->z / l};
 }
 
-Vec3d VEC3D_Vec3dIntersectPlane(Vec3d *plane_p, Vec3d *plane_n, Vec3d *lineStart, Vec3d *lineEnd){
+Vec3d VEC3D_Vec3dIntersectPlane(Vec3d *plane_p, Vec3d *plane_n, Vec3d *lineStart, Vec3d *lineEnd, float *t){
     *plane_n = VEC3D_Vec3dNormalize(plane_n);
     float plane_d = -VEC3D_Vec3dDotProduct(plane_n, plane_p);
     float ad = VEC3D_Vec3dDotProduct(lineStart, plane_n);
     float bd = VEC3D_Vec3dDotProduct(lineEnd, plane_n);
-    float t = (-plane_d - ad) / (bd - ad);
+    (*t) = (-plane_d - ad) / (bd - ad);
     Vec3d lineStartToEnd = VEC3D_Vec3dSub(lineEnd, lineStart);
-    Vec3d lineToIntersect = VEC3D_Vec3dMul(&lineStartToEnd, t);
+    float copy = *t;
+    Vec3d lineToIntersect = VEC3D_Vec3dMul(&lineStartToEnd, copy);
     return VEC3D_Vec3dAdd(lineStart, &lineToIntersect);
 }
 
@@ -199,11 +200,14 @@ int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Trian
     for (int i = 0; i < 3; i++){
         dist[i]  = VEC3D_DistanceToPlane(plane_p, plane_n, in_tri->p[i]);
     }
-    Vec3d* inside_points[3];  int nInsidePointCount = 0;
-    Vec3d* outside_points[3]; int nOutsidePointCount = 0;
+    Vec3d* inside_points[3];    int nInsidePointCount = 0;
+    Vec3d* outside_points[3];   int nOutsidePointCount = 0;
+    Vec2d* inside_tex[3];       int nInsideTexCount = 0;
+    Vec2d* outside_tex[3];      int nOutsideTexCount = 0; 
+
     for (int i = 0; i < 3; i++){
-        if(dist[i] >= 0){ inside_points[nInsidePointCount++] = &in_tri->p[i]; }
-        else { outside_points[nOutsidePointCount++] = &in_tri->p[i]; }
+        if(dist[i] >= 0){ inside_points[nInsidePointCount++] = &in_tri->p[i]; inside_tex[nInsideTexCount++] = &in_tri->uv[i];}
+        else { outside_points[nOutsidePointCount++] = &in_tri->p[i]; outside_tex[nOutsideTexCount++] = &in_tri->uv[i];}
     }
     if (nInsidePointCount == 0){
         return 0;
@@ -215,8 +219,17 @@ int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Trian
     if(nInsidePointCount == 1 && nOutsidePointCount == 2){
         out_tri1->shade = in_tri->shade;
         out_tri1->p[0] = *inside_points[0];
-        out_tri1->p[1] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0],outside_points[0]);
-        out_tri1->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0],outside_points[1]);
+        out_tri1->uv[0] = *inside_tex[0];
+        float t;
+        out_tri1->p[1] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0],outside_points[0], &t);
+        out_tri1->uv[1].u = t * (outside_tex[0]->u - inside_tex[0]->u) + inside_tex[0]->u;
+        out_tri1->uv[1].v = t * (outside_tex[0]->v - inside_tex[0]->v) + inside_tex[0]->v;
+        out_tri1->uv[1].w = t * (outside_tex[0]->w - inside_tex[0]->w) + inside_tex[0]->w;
+
+        out_tri1->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0],outside_points[1], &t);
+        out_tri1->uv[2].u = t * (outside_tex[1]->u - inside_tex[0]->u) + inside_tex[0]->u;
+        out_tri1->uv[2].v = t * (outside_tex[1]->v - inside_tex[0]->v) + inside_tex[0]->v;
+        out_tri1->uv[2].w = t * (outside_tex[1]->w - inside_tex[0]->w) + inside_tex[0]->w;
         return 1;
     }
     if(nInsidePointCount == 2 && nOutsidePointCount == 1){
@@ -226,16 +239,27 @@ int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Trian
 
         out_tri1->p[0] = *inside_points[0];
         out_tri1->p[1] = *inside_points[1];
-        out_tri1->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0], outside_points[0]);
+        out_tri1->uv[0] = *inside_tex[0];
+        out_tri1->uv[1] = *inside_tex[1];
+        float t;
+        out_tri1->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[0], outside_points[0],&t);
+        out_tri1->uv[2].u = t * (outside_tex[0]->u - inside_tex[0]->u) + inside_tex[0]->u;
+        out_tri1->uv[2].v = t * (outside_tex[0]->v - inside_tex[0]->v) + inside_tex[0]->v;
+        out_tri1->uv[2].w = t * (outside_tex[0]->w - inside_tex[0]->w) + inside_tex[0]->w;
 
         out_tri2->p[0] = *inside_points[1];
+        out_tri2->uv[0] = *inside_tex[1];
         out_tri2->p[1] = out_tri1->p[2];
-        out_tri2->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[1], outside_points[0]);
+        out_tri2->uv[1] = out_tri1->uv[2];//?
+        out_tri2->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[1], outside_points[0], &t);
+        out_tri2->uv[2].u = t * (outside_tex[0]->u - inside_tex[1]->u) + inside_tex[1]->u;
+        out_tri2->uv[2].v = t * (outside_tex[0]->v - inside_tex[1]->v) + inside_tex[1]->v;
+        out_tri2->uv[2].w = t * (outside_tex[0]->w - inside_tex[1]->w) + inside_tex[1]->w;
         return 2;
     }
     printf("out of bound\n");
 }
 
-Vec2d VEC2D_Vec2dConstructor(int x, int y){
-    return(Vec2d){.x= x, .y = y, .w = 1};
+Vec2d VEC2D_Vec2dConstructor(int u, int v){
+    return(Vec2d){.v= v, .u = u, .w = 1.0f};
 }

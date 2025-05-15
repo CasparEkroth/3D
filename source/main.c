@@ -7,6 +7,9 @@
 #define TEPOT_PAHT "assets/tepot.obj"
 #define AXIS_PAHT "assets/axis.obj"
 
+#define TEXTUR_OBJ "assets/texturdTest1/test_sphere.obj"
+#define TEXTUR_PNG "assets/texturdTest1/checker_texture.png"
+#define TEXTUR_NOISE "assets/texturdTest1/noise_texture.png"
 typedef struct engine3D {
     TriangleVector mesh;   
     Matrix4x4      matProj;
@@ -35,7 +38,11 @@ int main(int argc, char **argv){
     g.fElapsedTime = 0.0f;
 
     // — load mesh —
-    e3D.mesh    = loadFromObjectFile(AXIS_PAHT);
+    e3D.mesh    = loadFromObjectFile(TEXTUR_OBJ);
+    SDL_Surface *orig = IMG_Load(TEXTUR_NOISE);
+    SDL_Surface *texSurf = SDL_ConvertSurfaceFormat(orig,
+    SDL_PIXELFORMAT_ARGB8888, 0);
+    SDL_FreeSurface(orig);
     size_t nTris = VEC3D_TriangleVectorSize(e3D.mesh);
     printf("Loaded mesh with %zu triangles\n", nTris);
     if (nTris == 0) {
@@ -81,12 +88,14 @@ int main(int argc, char **argv){
             matWorld,    
             matView,
             e3D.matProj,     
-            e3D.vCamera      
+            e3D.vCamera,
+            texSurf    
         );
 
         SDL_RenderPresent(g.pRend);
     }
-
+    SDL_FreeSurface(texSurf);
+    DRAW3D_Shutdown();
     VEC3D_TriangleVectorDestroy(e3D.mesh);
     close_SDL(g.pWindow, g.pRend, &g);
     return 0;
