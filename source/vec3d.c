@@ -250,7 +250,7 @@ int VEC3D_ClipAgainstPlane(Vec3d plane_p, Vec3d plane_n, Triangle *in_tri, Trian
         out_tri2->p[0] = *inside_points[1];
         out_tri2->uv[0] = *inside_tex[1];
         out_tri2->p[1] = out_tri1->p[2];
-        out_tri2->uv[1] = out_tri1->uv[2];//?
+        out_tri2->uv[1] = out_tri1->uv[2];
         out_tri2->p[2] = VEC3D_Vec3dIntersectPlane(&plane_p, &plane_n, inside_points[1], outside_points[0], &t);
         out_tri2->uv[2].u = t * (outside_tex[0]->u - inside_tex[1]->u) + inside_tex[1]->u;
         out_tri2->uv[2].v = t * (outside_tex[0]->v - inside_tex[1]->v) + inside_tex[1]->v;

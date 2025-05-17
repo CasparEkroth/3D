@@ -14,7 +14,7 @@ void DRAW3D_MeshRender(
     Matrix4x4       matView,
     Matrix4x4       matProj,
     Vec3d           vCamera,
-    SDL_Surface*    texSurf
+    SDL_Texture*    tex
 );
 
 void TexturedTriangle(	
@@ -22,6 +22,14 @@ void TexturedTriangle(
     int x2, int y2, float u2, float v2, float w2,
     int x3, int y3, float u3, float v3, float w3,
     SDL_Surface *texSurf, SDL_Renderer *pRend, float *pDepthBuffer
+);
+
+void TexturedTriangle_GPU(
+    int x1, int y1, float u1, float v1,
+    int x2, int y2, float u2, float v2,
+    int x3, int y3, float u3, float v3,
+    SDL_Texture *tex, SDL_Renderer *r, 
+    uint8_t shade
 );
 
 #endif 

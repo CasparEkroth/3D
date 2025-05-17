@@ -8,11 +8,6 @@
 static float *gDepth = NULL;
 static int    gW = 0, gH = 0;
 
-static inline Uint32 get_pixel32(const SDL_Surface *s, int x, int y){
-    Uint8 *p = (Uint8 *)s->pixels + y * s->pitch + x * 4;
-    return *(Uint32 *)p;
-}
-
 static inline void put_pixel32(SDL_Surface *s, int x, int y, Uint32 c){
     Uint8 *p = (Uint8 *)s->pixels + y * s->pitch + x * 4;
     *(Uint32 *)p = c;
@@ -32,6 +27,28 @@ static inline Uint32 sample_texture(const SDL_Surface *tex, float u, float v){
     SDL_GetRGBA(pixel, tex->format, &r,&g,&b,&a);
     return (a<<24)|(r<<16)|(g<<8)|b;
 }
+
+
+Uint32 get_pixel(SDL_Surface *surface, int x, int y) {
+    if (!surface || x < 0 || x >= surface->w || y < 0 || y >= surface->h)
+        return 0;
+
+    int bpp = surface->format->BytesPerPixel;
+    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+
+    switch (bpp) {
+        case 1: return *p;
+        case 2: return *(Uint16 *)p;
+        case 3:
+            if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+                return p[0] << 16 | p[1] << 8 | p[2];
+            else
+                return p[0] | p[1] << 8 | p[2] << 16;
+        case 4: return *(Uint32 *)p;
+        default: return 0;
+    }
+}
+
 
 
 static inline void DrawPixel(SDL_Renderer *r, int x, int y, Uint32 colour){
@@ -99,7 +116,7 @@ void DRAW3D_MeshRender(
     Matrix4x4        matView,
     Matrix4x4        matProj,
     Vec3d            vCamera,
-    SDL_Surface*    texSurf
+    SDL_Texture*     tex
     ){
     int w, h;
     SDL_GetRendererOutputSize(pRend, &w, &h);
@@ -225,13 +242,19 @@ void DRAW3D_MeshRender(
             //     (SDL_Point){(int)t.p[0].x, (int)t.p[0].y},
             //     (SDL_Point){(int)t.p[1].x, (int)t.p[1].y},
             //     (SDL_Point){(int)t.p[2].x, (int)t.p[2].y},
-            //     t.shade
-            // );
-            TexturedTriangle(
-                t.p[0].x, t.p[0].y, t.uv[0].u,t.uv[0].v, t.uv[0].w,
-                t.p[1].x, t.p[1].y, t.uv[1].u,t.uv[1].v, t.uv[1].w,
-                t.p[2].x, t.p[2].y, t.uv[2].u,t.uv[2].v, t.uv[2].w,
-                texSurf, pRend, pDepthBuffer);
+            //     t.shade);
+
+            // TexturedTriangle(
+            //     t.p[0].x, t.p[0].y, t.uv[0].u,t.uv[0].v, t.uv[0].w,
+            //     t.p[1].x, t.p[1].y, t.uv[1].u,t.uv[1].v, t.uv[1].w,
+            //     t.p[2].x, t.p[2].y, t.uv[2].u,t.uv[2].v, t.uv[2].w,
+            //     texSurf, pRend, pDepthBuffer);
+
+            TexturedTriangle_GPU(
+                t.p[0].x, t.p[0].y, t.uv[0].u,t.uv[0].v,
+                t.p[1].x, t.p[1].y, t.uv[1].u,t.uv[1].v,
+                t.p[2].x, t.p[2].y, t.uv[2].u,t.uv[2].v,
+                tex, pRend, t.shade);
         }
         VEC3D_TriangleVectorDestroy(list);
     }
@@ -314,6 +337,7 @@ void TexturedTriangle(	int x1, int y1, float u1, float v1, float w1,
                 if (tex_w > pDepthBuffer[i * w + j]){
                     Uint32 colour = sample_texture(texSurf, tex_u/tex_w, tex_v/tex_w);
                     DrawPixel(pRend, j, i, colour);
+                    //SDL_RenderGeometry()
                     pDepthBuffer[i * w + j] = tex_w;
                 }
                 t += tstep;
@@ -365,8 +389,13 @@ void TexturedTriangle(	int x1, int y1, float u1, float v1, float w1,
                 tex_v = (1.0f - t) * tex_sv + t * tex_ev;
                 tex_w = (1.0f - t) * tex_sw + t * tex_ew;
                 if (tex_w > pDepthBuffer[i * w + j]){
-                    Uint32 colour = sample_texture(texSurf, tex_u/tex_w, tex_v/tex_w);
-                    DrawPixel(pRend, j, i, colour);
+                    Uint32 pixel = get_pixel(texSurf, tex_u, tex_v);
+                    Uint8 r, g, b, a;
+                    SDL_GetRGBA(pixel, texSurf->format, &r, &g, &b, &a);
+                    if (a == 0) continue;
+                    SDL_SetRenderDrawColor(pRend, r, g, b, a);
+                    SDL_RenderDrawPoint(pRend, j, i);
+                    //SDL_RenderGeometry()
                     pDepthBuffer[i * w + j] = tex_w;
                 }
                 t += tstep;
@@ -379,4 +408,30 @@ void DRAW3D_Shutdown(void){
     free(gDepth);
     gDepth = NULL;
     gW = gH = 0;
+}
+
+void TexturedTriangle_GPU(
+    int x1, int y1, float u1, float v1,
+    int x2, int y2, float u2, float v2,
+    int x3, int y3, float u3, float v3,
+    SDL_Texture *tex, SDL_Renderer *r,
+    uint8_t shade){
+    const float UV_SCALE = 1.0f / 65535.0f;
+
+    SDL_Vertex verts[3] = {
+        {.position = { (float)x1, (float)y1 },
+        .color    = { shade, shade, shade, 255 },
+        .tex_coord = { u1 * UV_SCALE, v1 * UV_SCALE } },
+
+        {.position = { (float)x2, (float)y2 },
+        .color    = { shade, shade, shade, 255 },
+        .tex_coord = { u2 * UV_SCALE, v2 * UV_SCALE } },
+
+        {.position = { (float)x3, (float)y3 },
+        .color    = { shade, shade, shade, 255 },
+        .tex_coord = { u3 * UV_SCALE, v3 * UV_SCALE } }
+    };
+
+    int indices[3] = { 0, 1, 2 };
+    SDL_RenderGeometry(r, tex, verts, 3, indices, 3);
 }

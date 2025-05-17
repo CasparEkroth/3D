@@ -39,16 +39,20 @@ int main(int argc, char **argv){
 
     // — load mesh —
     e3D.mesh    = loadFromObjectFile(TEXTUR_OBJ);
-    SDL_Surface *orig = IMG_Load(TEXTUR_NOISE);
+    SDL_Surface *orig = IMG_Load(TEXTUR_PNG);
     SDL_Surface *texSurf = SDL_ConvertSurfaceFormat(orig,
     SDL_PIXELFORMAT_ARGB8888, 0);
     SDL_FreeSurface(orig);
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(g.pRend, texSurf);
+    SDL_FreeSurface(texSurf);
+
     size_t nTris = VEC3D_TriangleVectorSize(e3D.mesh);
     printf("Loaded mesh with %zu triangles\n", nTris);
     if (nTris == 0) {
         fprintf(stderr, "Error: mesh has zero triangles!\n");
         return 1;
     }
+    
     e3D.vCamera = VEC3D_DEFAULT;  
     e3D.vLookDir = VEC3D_Vec3dConstructor(0,0,1.0f);
     e3D.fYaw = 0.0f;
@@ -89,12 +93,12 @@ int main(int argc, char **argv){
             matView,
             e3D.matProj,     
             e3D.vCamera,
-            texSurf    
+            tex    
         );
-
         SDL_RenderPresent(g.pRend);
     }
-    SDL_FreeSurface(texSurf);
+    //SDL_FreeSurface(texSurf);
+    SDL_DestroyTexture(tex);
     DRAW3D_Shutdown();
     VEC3D_TriangleVectorDestroy(e3D.mesh);
     close_SDL(g.pWindow, g.pRend, &g);
