@@ -70,7 +70,6 @@ TriangleVector loadFromObjectFile(const char* fileName) {
                     if (vi<0 || vi>=(int)v3Count)       { bad=true; break; }
                     if (tri[k].vt && (vti<0||vti>=(int)v2Count)) { bad=true; break; }
                     t.p [k] = verts3d[vi];
-                    // if no vt, zero uv
                     t.uv[k] = tri[k].vt
                         ? verts2d[vti]
                         : VEC2D_Vec2dConstructor(0,0);
