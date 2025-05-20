@@ -52,16 +52,14 @@ Uint32 get_pixel(SDL_Surface *surface, int x, int y) {
 
 
 static inline void DrawPixel(SDL_Renderer *r, int x, int y, Uint32 colour){
-    // unpack ARGB8888
     Uint8 a  = (colour >> 24) & 0xFF;
     Uint8 r8 = (colour >> 16) & 0xFF;
     Uint8 g8 = (colour >>  8) & 0xFF;
     Uint8 b8 =  colour        & 0xFF;
-    // choose blend mode based on alpha
-    SDL_SetRenderDrawBlendMode(r, a < 255 ? SDL_BLENDMODE_BLEND
-                                          : SDL_BLENDMODE_NONE); 
+
+    SDL_SetRenderDrawBlendMode(r, a < 255 ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE); 
     SDL_SetRenderDrawColor     (r, r8, g8, b8, a);
-    SDL_RenderDrawPoint        (r, x, y);               // :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
+    SDL_RenderDrawPoint        (r, x, y);              
 }
 
 void DRAW3D_DrawTriangle(int x1,int y1, int x2,int y2, int x3,int y3, SDL_Renderer *pRend, uint8_t shade){
@@ -337,12 +335,10 @@ void TexturedTriangle(	int x1, int y1, float u1, float v1, float w1,
                 if (tex_w > pDepthBuffer[i * w + j]){
                     Uint32 colour = sample_texture(texSurf, tex_u/tex_w, tex_v/tex_w);
                     DrawPixel(pRend, j, i, colour);
-                    //SDL_RenderGeometry()
                     pDepthBuffer[i * w + j] = tex_w;
                 }
                 t += tstep;
             }
-
         }
     }
 
@@ -395,7 +391,7 @@ void TexturedTriangle(	int x1, int y1, float u1, float v1, float w1,
                     if (a == 0) continue;
                     SDL_SetRenderDrawColor(pRend, r, g, b, a);
                     SDL_RenderDrawPoint(pRend, j, i);
-                    //SDL_RenderGeometry()
+                    
                     pDepthBuffer[i * w + j] = tex_w;
                 }
                 t += tstep;

@@ -102,7 +102,6 @@ Triangle VEC3D_TriangleVectorGetAt(TriangleVector tv, size_t index) {
 
 void VEC3D_Vec3dNormal(Vec3d* normal, const Triangle *tri){
     Vec3d line1, line2;
-    // edge from p0 → p1
     line1.x = tri->p[1].x - tri->p[0].x;
     line1.y = tri->p[1].y - tri->p[0].y;
     line1.z = tri->p[1].z - tri->p[0].z;
