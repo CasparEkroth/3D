@@ -7,7 +7,7 @@
 #define TEPOT_PAHT "assets/tepot.obj"
 #define AXIS_PAHT "assets/axis.obj"
 
-#define TEXTUR_OBJ "assets/texturdTest1/test_sphere.obj"
+#define TEXTUR_OBJ "assets/tepot.obj"
 #define TEXTUR_PNG "assets/texturdTest1/checker_texture.png"
 #define TEXTUR_NOISE "assets/texturdTest1/noise_texture.png"
 typedef struct engine3D {
